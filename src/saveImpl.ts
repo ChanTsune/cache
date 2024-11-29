@@ -1,7 +1,8 @@
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 
-import { Events, Inputs, State } from "./constants";
+import * as localCache from "./cache/local";
+import { CacheBackend, EnvKeys, Events, Inputs, State } from "./constants";
 import {
     IStateProvider,
     NullStateProvider,
@@ -31,6 +32,10 @@ export async function saveImpl(
             );
             return;
         }
+        const cacheBackend =
+            process.env[EnvKeys.CACHE_BACKEND] ||
+            core.getInput(Inputs.CacheBackend) ||
+            CacheBackend.Github;
 
         // If restore has stored a primary key in state, reuse that
         // Else re-evaluate from inputs
@@ -62,12 +67,31 @@ export async function saveImpl(
             Inputs.EnableCrossOsArchive
         );
 
-        cacheId = await cache.saveCache(
-            cachePaths,
-            primaryKey,
-            { uploadChunkSize: utils.getInputAsInt(Inputs.UploadChunkSize) },
-            enableCrossOsArchive
-        );
+        const uploadChunkSize = utils.getInputAsInt(Inputs.UploadChunkSize);
+
+        const saveCache = async () => {
+            switch (cacheBackend) {
+                case CacheBackend.Github:
+                    return await cache.saveCache(
+                        cachePaths,
+                        primaryKey,
+                        { uploadChunkSize },
+                        enableCrossOsArchive
+                    );
+                case CacheBackend.LocalFileSystem:
+                    return await localCache.saveCache(
+                        cachePaths,
+                        primaryKey,
+                        process.env[EnvKeys.CACHE_BASE_PATH]
+                    );
+                default:
+                    throw new Error(
+                        `Failed to save cache entry. Unsupported cache-backend detected. Value: ${cacheBackend}`
+                    );
+            }
+        };
+
+        cacheId = await saveCache();
 
         if (cacheId != -1) {
             core.info(`Cache saved with key: ${primaryKey}`);

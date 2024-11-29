@@ -34,6 +34,10 @@ inputs:
       save-always does not work as intended and will be removed in a future release.
       A separate `actions/cache/restore` step should be used instead.
       See https://github.com/actions/cache/tree/main/save#always-save-cache for more details.
+  cache-backend:
+    description: 'Specifies the cache backend to use for storing, saving artifacts. Valid options are "github" for GitHub-hosted cache storage and "local-filesystem" for caching locally on the runner.'
+    default: 'github'
+    required: false
 outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key'

@@ -5,7 +5,8 @@ export enum Inputs {
     UploadChunkSize = "upload-chunk-size", // Input for cache, save action
     EnableCrossOsArchive = "enableCrossOsArchive", // Input for cache, restore, save action
     FailOnCacheMiss = "fail-on-cache-miss", // Input for cache, restore action
-    LookupOnly = "lookup-only" // Input for cache, restore action
+    LookupOnly = "lookup-only", // Input for cache, restore action
+    CacheBackend = "cache-backend" // Input for cache, restore, save action
 }
 
 export enum Outputs {
@@ -23,6 +24,16 @@ export enum Events {
     Key = "GITHUB_EVENT_NAME",
     Push = "push",
     PullRequest = "pull_request"
+}
+
+export enum CacheBackend {
+    Github = "github",
+    LocalFileSystem = "local-filesystem"
+}
+
+export enum EnvKeys {
+    CACHE_BACKEND = "ACTIONS_CACHE_BACKEND",
+    CACHE_BASE_PATH = "ACTIONS_CACHE_BASE_PATH"
 }
 
 export const RefKey = "GITHUB_REF";

@@ -1,7 +1,15 @@
 import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 
-import { Events, Inputs, Outputs, State } from "./constants";
+import * as localCache from "./cache/local";
+import {
+    CacheBackend,
+    EnvKeys,
+    Events,
+    Inputs,
+    Outputs,
+    State
+} from "./constants";
 import {
     IStateProvider,
     NullStateProvider,
@@ -28,6 +36,10 @@ export async function restoreImpl(
             );
             return;
         }
+        const cacheBackend =
+            process.env[EnvKeys.CACHE_BACKEND] ||
+            core.getInput(Inputs.CacheBackend) ||
+            CacheBackend.Github;
 
         const primaryKey = core.getInput(Inputs.Key, { required: true });
         stateProvider.setState(State.CachePrimaryKey, primaryKey);
@@ -42,13 +54,30 @@ export async function restoreImpl(
         const failOnCacheMiss = utils.getInputAsBool(Inputs.FailOnCacheMiss);
         const lookupOnly = utils.getInputAsBool(Inputs.LookupOnly);
 
-        const cacheKey = await cache.restoreCache(
-            cachePaths,
-            primaryKey,
-            restoreKeys,
-            { lookupOnly: lookupOnly },
-            enableCrossOsArchive
-        );
+        const restoreCache = async () => {
+            switch (cacheBackend) {
+                case CacheBackend.Github:
+                    return await cache.restoreCache(
+                        cachePaths,
+                        primaryKey,
+                        restoreKeys,
+                        { lookupOnly: lookupOnly },
+                        enableCrossOsArchive
+                    );
+                case CacheBackend.LocalFileSystem:
+                    return await localCache.restoreCache(
+                        cachePaths,
+                        primaryKey,
+                        restoreKeys,
+                        process.env[EnvKeys.CACHE_BASE_PATH]
+                    );
+                default:
+                    throw new Error(
+                        `Failed to restore cache entry. Unsupported cache-backend detected. Value: ${cacheBackend}`
+                    );
+            }
+        };
+        const cacheKey = await restoreCache();
 
         if (!cacheKey) {
             // `cache-hit` is intentionally not set to `false` here to preserve existing behavior
